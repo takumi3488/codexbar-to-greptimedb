@@ -8,7 +8,7 @@ It does not launch the `codexbar` executable as a child process. The CLI resolve
 
 ## Requirements
 
-- Source builds require Swift 6.2+ on macOS 14+ or Linux.
+- Source builds require Swift 6.3+ on macOS 14+ or Swift 6.2+ on Linux.
 - Prebuilt releases support `macos-x86_64`, `macos-arm64`, `linux-x86_64`, and `linux-arm64`.
 - Linux releases target the Ubuntu 22.04 baseline (`glibc` 2.35+) and require `curl` (which provides `libcurl`) and `libsqlite3` at runtime.
 - A GreptimeDB instance with the HTTP SQL API enabled

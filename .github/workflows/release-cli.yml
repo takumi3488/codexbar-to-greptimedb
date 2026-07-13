@@ -32,22 +32,31 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: swift-actions/setup-swift@v2
+        if: runner.os != 'Linux'
         with:
-          swift-version: "6.2"
-      - name: Install Linux build dependencies
+          swift-version: "6.3"
+      - name: Run Linux unit tests
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install --yes libsqlite3-dev
-      - name: Run unit tests
-        run: swift test
-      - name: Build release binary
         run: |
-          if [ "$RUNNER_OS" = "Linux" ]; then
-            swift build --configuration release \
-              --product codexbar-to-greptimedb \
-              --static-swift-stdlib
-          else
-            swift build --configuration release --product codexbar-to-greptimedb
-          fi
+          docker run --rm \
+            --volume "$PWD:/workspace" \
+            --workdir /workspace \
+            swift:6.2-jammy \
+            bash -lc 'apt-get update -qq && apt-get install -y -qq libsqlite3-dev && swift test'
+      - name: Run macOS unit tests
+        if: runner.os != 'Linux'
+        run: swift test
+      - name: Build Linux release binary
+        if: runner.os == 'Linux'
+        run: |
+          docker run --rm \
+            --volume "$PWD:/workspace" \
+            --workdir /workspace \
+            swift:6.2-jammy \
+            bash -lc 'apt-get update -qq && apt-get install -y -qq libsqlite3-dev && swift build --configuration release --product codexbar-to-greptimedb --static-swift-stdlib'
+      - name: Build macOS release binary
+        if: runner.os != 'Linux'
+        run: swift build --configuration release --product codexbar-to-greptimedb
       - name: Package release archive
         env:
           TARGET: ${{ matrix.target }}
