@@ -9,8 +9,8 @@ It does not launch the `codexbar` executable as a child process. The CLI resolve
 ## Requirements
 
 - Source builds require Swift 6.3+ on macOS 14+ or Swift 6.2+ on Linux.
-- Prebuilt releases support `macos-x86_64`, `macos-arm64`, `linux-x86_64`, and `linux-arm64`.
-- Linux releases target the Ubuntu 22.04 baseline (`glibc` 2.35+) and require `curl` (which provides `libcurl`) and `libsqlite3` at runtime.
+- Prebuilt releases support `macos-x86_64`, `macos-arm64`, and `linux-x86_64`.
+- Linux releases target the Ubuntu 24.04 baseline (`glibc` 2.39+) and require `curl` (which provides `libcurl`) and `libsqlite3` at runtime.
 - A GreptimeDB instance with the HTTP SQL API enabled
 - CodexBar configuration for the providers to fetch
 
@@ -62,7 +62,7 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-`.github/workflows/release-cli.yml` runs unit tests and builds the four native archives on matching GitHub-hosted runners. Linux binaries use `--static-swift-stdlib` and are smoke-tested in a clean Ubuntu 22.04 container with the installer runtime prerequisites. The workflow verifies every checksum, creates or resumes a draft release, uploads every asset, and publishes the release only after all uploads succeed.
+`.github/workflows/release-cli.yml` runs unit tests and builds the three native archives on matching GitHub-hosted runners. Linux binaries use `--static-swift-stdlib` and are smoke-tested in a clean Ubuntu 24.04 container with the installer runtime prerequisites. The workflow verifies every checksum, creates or resumes a draft release, uploads every asset, and publishes the release only after all uploads succeed.
 
 ## CodexBar Configuration Resolution
 

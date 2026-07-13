@@ -9,8 +9,8 @@
 ## 前提条件
 
 - ソースビルドには macOS 14+ と Swift 6.3+、または Linux と Swift 6.2+ が必要です。
-- 配布済みバイナリは `macos-x86_64`、`macos-arm64`、`linux-x86_64`、`linux-arm64` に対応します。
-- Linux バイナリは Ubuntu 22.04 を基準（`glibc` 2.35+）にビルドされ、実行時には `curl`（`libcurl` を提供）と `libsqlite3` が必要です。
+- 配布済みバイナリは `macos-x86_64`、`macos-arm64`、`linux-x86_64` に対応します。
+- Linux バイナリは Ubuntu 24.04 を基準（`glibc` 2.39+）にビルドされ、実行時には `curl`（`libcurl` を提供）と `libsqlite3` が必要です。
 - HTTP SQL API を有効にした GreptimeDB
 - 対象プロバイダーを設定済みの CodexBar config
 
@@ -62,7 +62,7 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-`.github/workflows/release-cli.yml` は unit test を実行後、各対象 OS/CPU の GitHub-hosted runner で 4 種類のアーカイブをビルドします。Linux バイナリには `--static-swift-stdlib` を使用し、Ubuntu 22.04 のクリーンなコンテナでインストーラーの実行時前提を満たした状態でスモークテストします。すべてのチェックサムを検証し、draft Release を作成または再利用して全 asset の upload に成功した場合だけ公開します。
+`.github/workflows/release-cli.yml` は unit test を実行後、各対象 OS/CPU の GitHub-hosted runner で 3 種類のアーカイブをビルドします。Linux バイナリには `--static-swift-stdlib` を使用し、Ubuntu 24.04 のクリーンなコンテナでインストーラーの実行時前提を満たした状態でスモークテストします。すべてのチェックサムを検証し、draft Release を作成または再利用して全 asset の upload に成功した場合だけ公開します。
 
 ## CodexBar 設定の解決
 

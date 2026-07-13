@@ -88,6 +88,14 @@ case "$(uname -m)" in
     ;;
 esac
 
+case "$platform-$architecture" in
+  macos-arm64|macos-x86_64|linux-x86_64) ;;
+  linux-arm64)
+    printf '%s\n' "error: Linux arm64 release archives are not published" >&2
+    exit 1
+    ;;
+esac
+
 if [ "$VERSION" = "latest" ]; then
   VERSION="$(
     curl --fail --location --retry 3 --silent --show-error \
