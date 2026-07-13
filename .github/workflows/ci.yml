@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  fmt:
+    name: Format
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.2"
+      - name: Check formatting
+        run: swift format lint --strict --recursive Package.swift Sources Tests
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.2"
+      - name: Run SwiftLint
+        run: |
+          docker run --rm \
+            --volume "$PWD:/workspace" \
+            --workdir /workspace \
+            ghcr.io/realm/swiftlint:0.65.0 \
+            lint --strict --config .swiftlint.yml
+      - name: Install SQLite development headers
+        run: sudo apt-get update && sudo apt-get install --yes libsqlite3-dev
+      - name: Compile with warnings as errors
+        run: swift build --build-tests -Xswiftc -warnings-as-errors
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.2"
+      - name: Install SQLite development headers
+        run: sudo apt-get update && sudo apt-get install --yes libsqlite3-dev
+      - name: Run unit tests
+        run: swift test
+
+  e2e:
+    name: GreptimeDB E2E
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      GREPTIMEDB_IMAGE: greptime/greptimedb@sha256:ea8ebd1a3de42ae81389be5b9ed0505bf4e6289708245fab957162a8ea9f9c21
+      GREPTIMEDB_URL: http://127.0.0.1:14000
+      GREPTIMEDB_E2E_TABLE: ci_e2e_usage
+      RUN_GREPTIMEDB_E2E: "1"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.2"
+      - name: Install SQLite development headers
+        run: sudo apt-get update && sudo apt-get install --yes libsqlite3-dev
+      - name: Start GreptimeDB
+        run: |
+          docker run --detach --rm \
+            --name greptime-e2e \
+            --publish 127.0.0.1:14000:4000 \
+            "$GREPTIMEDB_IMAGE" \
+            standalone start --http-addr 0.0.0.0:4000
+      - name: Wait for GreptimeDB
+        run: |
+          for _ in {1..60}; do
+            if curl --fail --silent --show-error "$GREPTIMEDB_URL/health" >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs greptime-e2e
+          exit 1
+      - name: Run synthetic snapshot E2E
+        run: swift test --filter writesSyntheticSnapshotToGreptimeDB
+      - name: Show GreptimeDB logs on failure
+        if: failure()
+        run: docker logs greptime-e2e
+      - name: Remove GreptimeDB
+        if: always()
+        run: docker rm --force greptime-e2e
+
+  automerge:
+    name: Renovate automerge
+    runs-on: ubuntu-24.04
+    needs: [fmt, lint, test, e2e]
+    if: github.event_name == 'pull_request' && github.event.pull_request.user.login == 'renovate[bot]'
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Automerge
+        uses: pascalgn/automerge-action@v0.16.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MERGE_LABELS: automerge

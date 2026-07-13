@@ -1,0 +1,138 @@
+name: Release CLI
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15-intel
+            target: macos-x86_64
+          - runner: macos-14
+            target: macos-arm64
+          - runner: ubuntu-22.04
+            target: linux-x86_64
+          - runner: ubuntu-22.04-arm
+            target: linux-arm64
+    steps:
+      - uses: actions/checkout@v6
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.2"
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --yes libsqlite3-dev
+      - name: Run unit tests
+        run: swift test
+      - name: Build release binary
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            swift build --configuration release \
+              --product codexbar-to-greptimedb \
+              --static-swift-stdlib
+          else
+            swift build --configuration release --product codexbar-to-greptimedb
+          fi
+      - name: Package release archive
+        env:
+          TARGET: ${{ matrix.target }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          set -eu
+          binary=codexbar-to-greptimedb
+          version_without_prefix="${VERSION#v}"
+          asset_name="$binary-$version_without_prefix-$TARGET.tar.gz"
+          mkdir -p dist/staging
+          cp ".build/release/$binary" "dist/staging/$binary"
+          tar -C dist/staging -czf "dist/$asset_name" "$binary"
+          (
+            cd dist
+            if command -v shasum >/dev/null 2>&1; then
+              shasum -a 256 "$asset_name" > "$asset_name.sha256"
+            else
+              sha256sum "$asset_name" > "$asset_name.sha256"
+            fi
+          )
+      - name: Smoke test Linux release archive
+        if: runner.os == 'Linux'
+        env:
+          TARGET: ${{ matrix.target }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          set -eu
+          asset_name="codexbar-to-greptimedb-${VERSION#v}-$TARGET.tar.gz"
+          docker run --rm \
+            --volume "$PWD/dist:/dist:ro" \
+            --env ASSET_NAME="$asset_name" \
+            ubuntu:22.04 \
+            bash -ceu '
+              apt-get update -qq
+              apt-get install -y -qq curl libsqlite3-0
+              mkdir /release
+              tar -xzf "/dist/$ASSET_NAME" -C /release
+              /release/codexbar-to-greptimedb --help
+            '
+      - name: Upload release payload
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: release-*
+          path: release
+          merge-multiple: true
+      - name: Verify release checksums
+        working-directory: release
+        run: |
+          set -eu
+          for checksum in *.sha256; do
+            sha256sum --check "$checksum"
+          done
+      - name: Publish complete release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -eu
+          if gh release view "$TAG" --json isDraft --jq '.isDraft' >/dev/null 2>&1; then
+            is_draft="$(gh release view "$TAG" --json isDraft --jq '.isDraft')"
+            if [ "$is_draft" != "true" ]; then
+              printf '%s\n' "error: release $TAG is already published" >&2
+              exit 1
+            fi
+          else
+            gh release create "$TAG" \
+              --draft \
+              --title "codexbar-to-greptimedb $TAG" \
+              --generate-notes
+          fi
+          gh release upload "$TAG" release/* --clobber
+          gh release edit "$TAG" --draft=false

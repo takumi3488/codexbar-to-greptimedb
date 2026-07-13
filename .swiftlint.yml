@@ -1,0 +1,27 @@
+included:
+  - Package.swift
+  - Sources
+  - Tests
+
+excluded:
+  - .build
+
+disabled_rules:
+  - cyclomatic_complexity
+  - function_body_length
+  - opening_brace
+  - optional_data_string_conversion
+  - trailing_comma
+
+line_length:
+  warning: 160
+  error: 200
+
+identifier_name:
+  min_length:
+    warning: 2
+  excluded:
+    - id
+    - ts
+
+reporter: xcode
