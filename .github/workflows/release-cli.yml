@@ -34,7 +34,7 @@ jobs:
           swift-version: "6.2"
       - name: Install Linux build dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install --yes libsqlite3-dev
+        run: sudo apt-get update && sudo apt-get install --yes libcurl4-openssl-dev libsqlite3-dev
       - name: Run unit tests
         run: swift test
       - name: Build release binary

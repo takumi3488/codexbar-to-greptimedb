@@ -8,7 +8,7 @@
 
 ## 前提条件
 
-- ソースビルドには macOS 14+ と Swift 6.3+、または Linux と Swift 6.2+ が必要です。
+- ソースビルドには macOS 14+ または Linux と Swift 6.2+ が必要です。
 - 配布済みバイナリは `macos-x86_64`、`macos-arm64`、`linux-x86_64` に対応します。
 - Linux バイナリは Ubuntu 24.04 を基準（`glibc` 2.39+）にビルドされ、実行時には `curl`（`libcurl` を提供）と `libsqlite3` が必要です。
 - HTTP SQL API を有効にした GreptimeDB
