@@ -136,3 +136,55 @@ jobs:
           fi
           gh release upload "$TAG" release/* --clobber
           gh release edit "$TAG" --draft=false
+
+
+  publish-homebrew:
+    name: Publish Homebrew Formula
+    needs: publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: release-macos-*
+          path: release
+          merge-multiple: true
+      - name: Checkout Homebrew tap
+        uses: actions/checkout@v6
+        with:
+          repository: smartcrabai/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+      - name: Generate Homebrew formula
+        env:
+          REPOSITORY: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          arm64_asset="codexbar-to-greptimedb-${version}-macos-arm64.tar.gz"
+          x86_64_asset="codexbar-to-greptimedb-${version}-macos-x86_64.tar.gz"
+
+          VERSION="$TAG" \
+            REPOSITORY="$REPOSITORY" \
+            MACOS_ARM64_SHA256="$(cut -d ' ' -f 1 "release/${arm64_asset}.sha256")" \
+            MACOS_X86_64_SHA256="$(cut -d ' ' -f 1 "release/${x86_64_asset}.sha256")" \
+            OUTPUT="homebrew-tap/Formula/codexbar-to-greptimedb.rb" \
+            bash scripts/generate-homebrew-formula.sh
+      - name: Commit formula
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          formula="Formula/codexbar-to-greptimedb.rb"
+          git -C homebrew-tap config user.name "github-actions[bot]"
+          git -C homebrew-tap config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C homebrew-tap add "$formula"
+          if git -C homebrew-tap diff --cached --quiet; then
+            exit 0
+          fi
+          git -C homebrew-tap commit -m "codexbar-to-greptimedb ${TAG}"
+          git -C homebrew-tap push
