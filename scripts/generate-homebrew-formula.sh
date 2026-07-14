@@ -36,7 +36,11 @@ class CodexbarToGreptimedb < Formula
   homepage "https://github.com/${REPOSITORY}"
   version "${version}"
   license "Apache-2.0"
-  depends_on macos: :sonoma
+  depends_on :macos
+
+  on_macos do
+    depends_on macos: :sonoma
+  end
 
   if Hardware::CPU.arm?
     url "${release_url}/${binary}-${version}-macos-arm64.tar.gz"
