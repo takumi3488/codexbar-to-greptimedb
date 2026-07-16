@@ -21,14 +21,19 @@ struct CodexBarToGreptimeDB {
       }
 
       let exporter = Exporter(configuration: configuration)
+      let timeoutSeconds = configuration.exportTimeoutSeconds
       guard let interval = configuration.pollInterval else {
-        try await exporter.runOnce()
+        try await withExportTimeout(seconds: timeoutSeconds) {
+          try await exporter.runOnce()
+        }
         return
       }
 
       while !Task.isCancelled {
         do {
-          try await exporter.runOnce()
+          try await withExportTimeout(seconds: timeoutSeconds) {
+            try await exporter.runOnce()
+          }
         } catch {
           FileHandle.standardError.write(
             Data("error: \(error.localizedDescription); retrying in \(interval) seconds\n".utf8)

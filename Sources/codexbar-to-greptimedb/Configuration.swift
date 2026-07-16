@@ -9,7 +9,10 @@ struct Configuration: Sendable {
   let provider: String?
   let source: String?
   let pollInterval: TimeInterval?
+  let exportTimeoutSeconds: TimeInterval
   let showHelp: Bool
+
+  static let defaultExportTimeoutSeconds: TimeInterval = 300
 
   static let usage = """
     Usage: codexbar-to-greptimedb [options]
@@ -34,6 +37,7 @@ struct Configuration: Sendable {
       --once                          Run once even when an interval environment variable is set.
       --watch, --every-minute         Poll every 60 seconds.
       --interval-seconds SECONDS      CODEXBAR_TO_GREPTIMEDB_INTERVAL_SECONDS
+      --export-timeout-seconds SECONDS  CODEXBAR_TO_GREPTIMEDB_EXPORT_TIMEOUT_SECONDS (default: 300)
 
     Other:
       -h, --help                      Show this help.
@@ -53,7 +57,7 @@ struct Configuration: Sendable {
         flagValues.insert(argument)
         index += 1
       case "--greptime-url", "--database", "--table", "--username", "--password", "--provider",
-        "--source", "--interval-seconds":
+        "--source", "--interval-seconds", "--export-timeout-seconds":
         let valueIndex = index + 1
         guard valueIndex < arguments.count else {
           throw ExportError.invalidConfiguration("\(argument) requires a value")
@@ -116,6 +120,19 @@ struct Configuration: Sendable {
       interval = nil
     }
 
+    let exportTimeoutSeconds: TimeInterval
+    if let rawTimeout = values["--export-timeout-seconds"]
+      ?? environment["CODEXBAR_TO_GREPTIMEDB_EXPORT_TIMEOUT_SECONDS"]
+    {
+      guard let seconds = TimeInterval(rawTimeout), seconds > 0 else {
+        throw ExportError.invalidConfiguration(
+          "export timeout must be a positive number of seconds")
+      }
+      exportTimeoutSeconds = seconds
+    } else {
+      exportTimeoutSeconds = defaultExportTimeoutSeconds
+    }
+
     return Configuration(
       greptimeDBURL: greptimeDBURL,
       database: database,
@@ -125,6 +142,7 @@ struct Configuration: Sendable {
       provider: values["--provider"] ?? environment["CODEXBAR_PROVIDER"],
       source: values["--source"] ?? environment["CODEXBAR_SOURCE"],
       pollInterval: interval,
+      exportTimeoutSeconds: exportTimeoutSeconds,
       showHelp: showHelp
     )
   }

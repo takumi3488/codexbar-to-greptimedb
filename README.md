@@ -97,11 +97,13 @@ Run continuously in the foreground:
 codexbar-to-greptimedb --every-minute
 ```
 
-`--once` forces one-shot behavior even when an interval is configured. During periodic operation, transient CodexBar or GreptimeDB failures are written to standard error and retried at the next interval; one-shot operation exits nonzero on failure.
+`--once` forces one-shot behavior even when an interval is configured. During periodic operation, transient CodexBar or GreptimeDB failures are written to standard error and retried at the next interval; one-shot operation exits nonzero on failure. Each export also runs under a timeout (`--export-timeout-seconds` / `CODEXBAR_TO_GREPTIMEDB_EXPORT_TIMEOUT_SECONDS`, default 300 seconds) so a stuck fetch or write cannot stall the loop forever; a timeout is treated the same as any other transient failure.
 
 ### Homebrew service
 
 The Homebrew formula creates `$(brew --prefix)/etc/codexbar-to-greptimedb.env` with `GREPTIMEDB_URL=http://localhost:4000`. It preserves the file across upgrades and enforces mode `0600` because it can contain credentials.
+
+The service logs standard output and standard error to `$(brew --prefix)/var/log/codexbar-to-greptimedb.log`.
 
 ```sh
 nano "$(brew --prefix)/etc/codexbar-to-greptimedb.env"
@@ -141,6 +143,7 @@ brew services restart smartcrabai/tap/codexbar-to-greptimedb
 | `--interval-seconds N` | `CODEXBAR_TO_GREPTIMEDB_INTERVAL_SECONDS` | One-shot | Run every positive `N` seconds |
 | `--watch`, `--every-minute` | None | None | Run every 60 seconds |
 | `--once` | None | None | Force one-shot behavior |
+| `--export-timeout-seconds N` | `CODEXBAR_TO_GREPTIMEDB_EXPORT_TIMEOUT_SECONDS` | `300` | Abort and retry an export that runs longer than `N` seconds |
 
 CLI options override their equivalent environment variables. `--database` and `--table` must be simple SQL identifiers: they begin with a letter or `_` and contain only letters, numbers, and `_`.
 
