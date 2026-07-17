@@ -77,6 +77,8 @@ class CodexbarToGreptimedb < Formula
   service do
     run opt_libexec/"${binary}-service"
     environment_variables PATH: std_service_path_env
+    log_path var/"log/${binary}.log"
+    error_log_path var/"log/${binary}.log"
   end
 
   test do

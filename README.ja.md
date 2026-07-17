@@ -97,11 +97,13 @@ codexbar-to-greptimedb --provider codex --source cli
 codexbar-to-greptimedb --every-minute
 ```
 
-`--once` は、間隔を設定していても一回だけの実行を強制します。定期実行中の一時的な CodexBar または GreptimeDB のエラーは標準エラーに出力し、次の周期で再試行します。一回実行時は失敗すると非 0 で終了します。
+`--once` は、間隔を設定していても一回だけの実行を強制します。定期実行中の一時的な CodexBar または GreptimeDB のエラーは標準エラーに出力し、次の周期で再試行します。一回実行時は失敗すると非 0 で終了します。各回の保存処理にはタイムアウトを設定しており(`--export-timeout-seconds` / `CODEXBAR_TO_GREPTIMEDB_EXPORT_TIMEOUT_SECONDS`、既定 300 秒)、取得や書き込みがハングしてもループが永久停止しないようにしています。タイムアウトは他の一時的な失敗と同様に扱われます。
 
 ### Homebrew service
 
 Homebrew Formula は `$(brew --prefix)/etc/codexbar-to-greptimedb.env` を作成し、既定で `GREPTIMEDB_URL=http://localhost:4000` を設定します。upgrade 後も設定ファイルを保持し、認証情報を含められるため権限は `0600` です。
+
+service は標準出力・標準エラーを `$(brew --prefix)/var/log/codexbar-to-greptimedb.log` に記録します。
 
 ```sh
 nano "$(brew --prefix)/etc/codexbar-to-greptimedb.env"
@@ -141,6 +143,7 @@ brew services restart smartcrabai/tap/codexbar-to-greptimedb
 | `--interval-seconds N` | `CODEXBAR_TO_GREPTIMEDB_INTERVAL_SECONDS` | 一回実行 | 正の `N` 秒ごとに実行 |
 | `--watch`, `--every-minute` | なし | なし | 60 秒ごとに実行 |
 | `--once` | なし | なし | 一回だけ実行 |
+| `--export-timeout-seconds N` | `CODEXBAR_TO_GREPTIMEDB_EXPORT_TIMEOUT_SECONDS` | `300` | 保存処理が `N` 秒を超えたら中断して再試行 |
 
 CLI オプションは同名の環境変数より優先します。`--database` と `--table` は、英字または `_` で開始し、英数字と `_` だけで構成される SQL 識別子である必要があります。
 

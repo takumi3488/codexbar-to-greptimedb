@@ -5,6 +5,7 @@ enum ExportError: LocalizedError, Equatable {
   case invalidConfiguration(String)
   case providerFetchFailed(provider: String, message: String)
   case greptimeDBFailed(status: Int, message: String)
+  case exportTimedOut(seconds: TimeInterval)
 
   var errorDescription: String? {
     switch self {
@@ -14,6 +15,8 @@ enum ExportError: LocalizedError, Equatable {
       return "CodexBarCore could not fetch \(provider): \(message)"
     case .greptimeDBFailed(let status, let message):
       return "GreptimeDB returned HTTP \(status): \(message)"
+    case .exportTimedOut(let seconds):
+      return "export timed out after \(seconds) seconds"
     }
   }
 }
