@@ -167,12 +167,23 @@ private func providerResult(
   extras: [NamedRateWindow],
   email: String? = nil,
   organization: String? = nil,
-  credits: Double? = nil
+  credits: Double? = nil,
+  openRouterBalance: Double? = nil
 ) -> ProviderFetchResult {
   let usage = UsageSnapshot(
     primary: primary,
     secondary: secondary,
     extraRateWindows: extras,
+    openRouterUsage: openRouterBalance.map {
+      OpenRouterUsageSnapshot(
+        totalCredits: $0,
+        totalUsage: 0,
+        balance: $0,
+        usedPercent: 0,
+        rateLimit: nil,
+        updatedAt: Date(timeIntervalSince1970: 0)
+      )
+    },
     updatedAt: Date(timeIntervalSince1970: 0),
     identity: ProviderIdentitySnapshot(
       providerID: .claude,
@@ -192,6 +203,28 @@ private func providerResult(
     strategyID: "test",
     strategyKind: .oauth
   )
+}
+
+@Test func fallsBackToOpenRouterBalanceWhenCreditsAreMissing() {
+  let exported = ExportSnapshot(
+    provider: .openrouter,
+    result: providerResult(primary: nil, secondary: nil, extras: [], openRouterBalance: 7.25),
+    capturedAt: Date(timeIntervalSince1970: 0)
+  )
+
+  #expect(exported.creditsRemaining == 7.25)
+}
+
+@Test func prefersCreditsOverOpenRouterBalanceWhenBothArePresent() {
+  let exported = ExportSnapshot(
+    provider: .openrouter,
+    result: providerResult(
+      primary: nil, secondary: nil, extras: [], credits: 18.5, openRouterBalance: 7.25
+    ),
+    capturedAt: Date(timeIntervalSince1970: 0)
+  )
+
+  #expect(exported.creditsRemaining == 18.5)
 }
 
 @Test func usesActiveAccountLabelOnlyAsAccountKeyFallback() {
