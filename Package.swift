@@ -9,7 +9,7 @@ let package = Package(
   dependencies: [
     .package(
       url: "https://github.com/steipete/CodexBar",
-      revision: "3e05988f5c5fc1dff70c7a58bd659208cf34c840")
+      revision: "5a0cbc07119ac04d998e2fd5267442ed9358fff0")
   ],
   targets: [
     // Targets are the basic building blocks of a package, defining a module or a test suite.
