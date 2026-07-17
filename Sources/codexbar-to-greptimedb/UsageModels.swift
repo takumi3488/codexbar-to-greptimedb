@@ -51,7 +51,7 @@ struct ExportSnapshot: Sendable {
     accountKey = email ?? Self.nonEmpty(accountLabel) ?? "__default__"
     accountOrganization = result.usage.identity?.accountOrganization
     usageUpdatedAt = result.usage.updatedAt
-    creditsRemaining = result.credits?.remaining
+    creditsRemaining = result.credits?.remaining ?? result.usage.openRouterUsage?.balance
 
     windows =
       [
