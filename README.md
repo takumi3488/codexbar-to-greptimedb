@@ -99,6 +99,17 @@ codexbar-to-greptimedb --every-minute
 
 `--once` forces one-shot behavior even when an interval is configured. During periodic operation, transient CodexBar or GreptimeDB failures are written to standard error and retried at the next interval; one-shot operation exits nonzero on failure. Each export also runs under a timeout (`--export-timeout-seconds` / `CODEXBAR_TO_GREPTIMEDB_EXPORT_TIMEOUT_SECONDS`, default 300 seconds) so a stuck fetch or write cannot stall the loop forever; a timeout is treated the same as any other transient failure.
 
+### Discord notification when a usage window frees up
+
+When running in a polling mode (`--watch`, `--every-minute`, or `--interval-seconds`) with `DISCORD_WEBHOOK_URL` set, the exporter compares each poll's usage percentages to the previous poll's. If a usage window was at 100% and has now dropped below 100%, it posts a message to that Discord webhook. This is useful for getting notified as soon as a rate limit that was fully consumed becomes available again.
+
+```sh
+export DISCORD_WEBHOOK_URL='https://discord.com/api/webhooks/<id>/<token>'
+codexbar-to-greptimedb --every-minute
+```
+
+The comparison only happens between polls within the same running process, so it has no effect in one-shot mode. A window that disappears from a later poll (rather than reporting a lower percentage) is not treated as a recovery, since there is no confirmation it actually dropped below 100%.
+
 ### Homebrew service
 
 The Homebrew formula creates `$(brew --prefix)/etc/codexbar-to-greptimedb.env` with `GREPTIMEDB_URL=http://localhost:4000`. It preserves the file across upgrades and enforces mode `0600` because it can contain credentials.
@@ -144,6 +155,7 @@ brew services restart smartcrabai/tap/codexbar-to-greptimedb
 | `--watch`, `--every-minute` | None | None | Run every 60 seconds |
 | `--once` | None | None | Force one-shot behavior |
 | `--export-timeout-seconds N` | `CODEXBAR_TO_GREPTIMEDB_EXPORT_TIMEOUT_SECONDS` | `300` | Abort and retry an export that runs longer than `N` seconds |
+| None | `DISCORD_WEBHOOK_URL` | None | Discord webhook to notify when a usage window drops below 100% (polling mode only) |
 
 CLI options override their equivalent environment variables. `--database` and `--table` must be simple SQL identifiers: they begin with a letter or `_` and contain only letters, numbers, and `_`.
 

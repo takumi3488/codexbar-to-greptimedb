@@ -3,7 +3,8 @@ import Foundation
 struct Exporter: Sendable {
   let configuration: Configuration
 
-  func runOnce() async throws {
+  @discardableResult
+  func runOnce() async throws -> [ExportSnapshot] {
     let snapshots = try await CodexBarCoreFetcher(
       providerSelector: configuration.provider,
       sourceOverride: configuration.source
@@ -14,5 +15,6 @@ struct Exporter: Sendable {
 
     let providers = Set(snapshots.map(\.provider)).sorted().joined(separator: ", ")
     print("saved \(rowCount) rows for \(snapshots.count) provider snapshot(s): \(providers)")
+    return snapshots
   }
 }

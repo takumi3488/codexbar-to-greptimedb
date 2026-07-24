@@ -125,6 +125,43 @@ import Testing
   }
 }
 
+@Test func parsesValidDiscordWebhookURLFromEnvironment() throws {
+  let configuration = try Configuration.parse(
+    arguments: ["--greptime-url", "http://localhost:4000"],
+    environment: ["DISCORD_WEBHOOK_URL": "https://discord.com/api/webhooks/1/abc"]
+  )
+
+  #expect(
+    configuration.discordWebhookURL?.absoluteString == "https://discord.com/api/webhooks/1/abc")
+}
+
+@Test func rejectsInvalidDiscordWebhookURL() {
+  #expect(throws: ExportError.self) {
+    try Configuration.parse(
+      arguments: ["--greptime-url", "http://localhost:4000"],
+      environment: ["DISCORD_WEBHOOK_URL": "not-a-url"]
+    )
+  }
+}
+
+@Test func rejectsNonHTTPDiscordWebhookScheme() {
+  #expect(throws: ExportError.self) {
+    try Configuration.parse(
+      arguments: ["--greptime-url", "http://localhost:4000"],
+      environment: ["DISCORD_WEBHOOK_URL": "ftp://discord.com/api/webhooks/1/abc"]
+    )
+  }
+}
+
+@Test func treatsEmptyDiscordWebhookURLAsUnset() throws {
+  let configuration = try Configuration.parse(
+    arguments: ["--greptime-url", "http://localhost:4000"],
+    environment: ["DISCORD_WEBHOOK_URL": ""]
+  )
+
+  #expect(configuration.discordWebhookURL == nil)
+}
+
 @Test func generatesOrderedSQLRowsFromCoreTypes() throws {
   let exported = ExportSnapshot(
     provider: .claude,
@@ -161,7 +198,7 @@ import Testing
     ))
 }
 
-private func providerResult(
+func providerResult(
   primary: RateWindow?,
   secondary: RateWindow?,
   extras: [NamedRateWindow],

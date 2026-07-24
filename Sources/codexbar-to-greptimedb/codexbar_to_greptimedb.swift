@@ -23,16 +23,50 @@ struct CodexBarToGreptimeDB {
       let exporter = Exporter(configuration: configuration)
       let timeoutSeconds = configuration.exportTimeoutSeconds
       guard let interval = configuration.pollInterval else {
-        try await withExportTimeout(seconds: timeoutSeconds) {
+        _ = try await withExportTimeout(seconds: timeoutSeconds) {
           try await exporter.runOnce()
         }
         return
       }
 
+      let discordNotifier = configuration.discordWebhookURL.map(DiscordNotifier.init(webhookURL:))
+      var previousUsagePercents: [UsageWindowKey: Double] = [:]
+
       while !Task.isCancelled {
         do {
-          try await withExportTimeout(seconds: timeoutSeconds) {
+          let snapshots = try await withExportTimeout(seconds: timeoutSeconds) {
             try await exporter.runOnce()
+          }
+          if let discordNotifier {
+            var nextUsagePercents = UsageRecoveryDetector.usagePercents(in: snapshots)
+            let recovered = UsageRecoveryDetector.recoveredWindows(
+              previous: previousUsagePercents, current: nextUsagePercents)
+            if !recovered.isEmpty {
+              // Windows that fail to notify keep their pre-recovery baseline so the
+              // next poll re-detects and retries them instead of losing the alert.
+              do {
+                let failures = try await withExportTimeout(seconds: timeoutSeconds) {
+                  await discordNotifier.notify(recovered: recovered)
+                }
+                for failure in failures {
+                  let key = failure.window.key
+                  FileHandle.standardError.write(
+                    Data(
+                      "warning: failed to send Discord notification for \(key.provider)/\(key.window): \(failure.error.localizedDescription)\n"
+                        .utf8))
+                  nextUsagePercents[key] = failure.window.previousPercent
+                }
+              } catch {
+                FileHandle.standardError.write(
+                  Data(
+                    "warning: failed to send Discord notifications: \(error.localizedDescription)\n"
+                      .utf8))
+                for window in recovered {
+                  nextUsagePercents[window.key] = window.previousPercent
+                }
+              }
+            }
+            previousUsagePercents = nextUsagePercents
           }
         } catch {
           FileHandle.standardError.write(
