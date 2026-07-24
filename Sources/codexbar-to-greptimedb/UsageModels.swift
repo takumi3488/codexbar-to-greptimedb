@@ -6,6 +6,7 @@ enum ExportError: LocalizedError, Equatable {
   case providerFetchFailed(provider: String, message: String)
   case greptimeDBFailed(status: Int, message: String)
   case exportTimedOut(seconds: TimeInterval)
+  case discordNotificationFailed(status: Int, message: String)
 
   var errorDescription: String? {
     switch self {
@@ -17,6 +18,8 @@ enum ExportError: LocalizedError, Equatable {
       return "GreptimeDB returned HTTP \(status): \(message)"
     case .exportTimedOut(let seconds):
       return "export timed out after \(seconds) seconds"
+    case .discordNotificationFailed(let status, let message):
+      return "Discord webhook returned HTTP \(status): \(message)"
     }
   }
 }

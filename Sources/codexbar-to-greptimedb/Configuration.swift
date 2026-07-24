@@ -10,6 +10,7 @@ struct Configuration: Sendable {
   let source: String?
   let pollInterval: TimeInterval?
   let exportTimeoutSeconds: TimeInterval
+  let discordWebhookURL: URL?
   let showHelp: Bool
 
   static let defaultExportTimeoutSeconds: TimeInterval = 300
@@ -38,6 +39,10 @@ struct Configuration: Sendable {
       --watch, --every-minute         Poll every 60 seconds.
       --interval-seconds SECONDS      CODEXBAR_TO_GREPTIMEDB_INTERVAL_SECONDS
       --export-timeout-seconds SECONDS  CODEXBAR_TO_GREPTIMEDB_EXPORT_TIMEOUT_SECONDS (default: 300)
+
+    Notifications (polling mode only):
+      DISCORD_WEBHOOK_URL              Notify this Discord webhook when a usage window that was
+                                        at 100% drops below 100% on a later poll.
 
     Other:
       -h, --help                      Show this help.
@@ -133,6 +138,24 @@ struct Configuration: Sendable {
       exportTimeoutSeconds = defaultExportTimeoutSeconds
     }
 
+    let discordWebhookURL: URL?
+    if showHelp {
+      discordWebhookURL = nil
+    } else if let rawWebhookURL = environment["DISCORD_WEBHOOK_URL"]?.trimmingCharacters(
+      in: .whitespacesAndNewlines), !rawWebhookURL.isEmpty
+    {
+      guard let parsedURL = URL(string: rawWebhookURL), parsedURL.scheme != nil,
+        parsedURL.host != nil,
+        ["http", "https"].contains(parsedURL.scheme?.lowercased() ?? "")
+      else {
+        throw ExportError.invalidConfiguration(
+          "DISCORD_WEBHOOK_URL must be an absolute HTTP(S) URL")
+      }
+      discordWebhookURL = parsedURL
+    } else {
+      discordWebhookURL = nil
+    }
+
     return Configuration(
       greptimeDBURL: greptimeDBURL,
       database: database,
@@ -143,6 +166,7 @@ struct Configuration: Sendable {
       source: values["--source"] ?? environment["CODEXBAR_SOURCE"],
       pollInterval: interval,
       exportTimeoutSeconds: exportTimeoutSeconds,
+      discordWebhookURL: discordWebhookURL,
       showHelp: showHelp
     )
   }

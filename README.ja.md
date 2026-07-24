@@ -99,6 +99,17 @@ codexbar-to-greptimedb --every-minute
 
 `--once` は、間隔を設定していても一回だけの実行を強制します。定期実行中の一時的な CodexBar または GreptimeDB のエラーは標準エラーに出力し、次の周期で再試行します。一回実行時は失敗すると非 0 で終了します。各回の保存処理にはタイムアウトを設定しており(`--export-timeout-seconds` / `CODEXBAR_TO_GREPTIMEDB_EXPORT_TIMEOUT_SECONDS`、既定 300 秒)、取得や書き込みがハングしてもループが永久停止しないようにしています。タイムアウトは他の一時的な失敗と同様に扱われます。
 
+### 利用枠が空いたときの Discord 通知
+
+継続実行モード(`--watch`、`--every-minute`、`--interval-seconds`)で `DISCORD_WEBHOOK_URL` を設定していると、今回の取得結果を前回の取得結果と比較します。ある利用枠(usage window)の使用率が前回は 100% で、今回は 100% 未満に下がっていた場合、その Discord Webhook にメッセージを送信します。使い切っていたレート制限が復活したタイミングをすぐに知りたい場合に便利です。
+
+```sh
+export DISCORD_WEBHOOK_URL='https://discord.com/api/webhooks/<id>/<token>'
+codexbar-to-greptimedb --every-minute
+```
+
+この比較は同一プロセス内で継続実行している間の前回・今回の取得結果同士で行うため、一回実行モードでは何も起きません。また、ある利用枠が次回の取得結果に含まれていない(使用率が下がったのではなく単に情報が取得できなかった)場合は、100% 未満に下がったとは確認できないため通知しません。
+
 ### Homebrew service
 
 Homebrew Formula は `$(brew --prefix)/etc/codexbar-to-greptimedb.env` を作成し、既定で `GREPTIMEDB_URL=http://localhost:4000` を設定します。upgrade 後も設定ファイルを保持し、認証情報を含められるため権限は `0600` です。
@@ -144,6 +155,7 @@ brew services restart smartcrabai/tap/codexbar-to-greptimedb
 | `--watch`, `--every-minute` | なし | なし | 60 秒ごとに実行 |
 | `--once` | なし | なし | 一回だけ実行 |
 | `--export-timeout-seconds N` | `CODEXBAR_TO_GREPTIMEDB_EXPORT_TIMEOUT_SECONDS` | `300` | 保存処理が `N` 秒を超えたら中断して再試行 |
+| なし | `DISCORD_WEBHOOK_URL` | なし | 利用枠の使用率が 100% 未満に下がったときに通知する Discord Webhook(継続実行モードのみ) |
 
 CLI オプションは同名の環境変数より優先します。`--database` と `--table` は、英字または `_` で開始し、英数字と `_` だけで構成される SQL 識別子である必要があります。
 
