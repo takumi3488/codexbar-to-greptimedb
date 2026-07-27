@@ -30,9 +30,13 @@ struct DiscordNotifier: Sendable {
     let key = recovery.key
     let previous = formatPercent(recovery.previousPercent)
     let current = formatPercent(recovery.currentPercent)
-    return
-      "codexbar-to-greptimedb: \(key.provider) (\(key.source)) account \(key.accountKey) "
-      + "usage window \"\(key.window)\" is no longer at 100% (\(previous)% -> \(current)%)."
+    return """
+      🎉 **Usage limit recovered**
+      **Provider:** \(key.provider) (`\(key.source)`)
+      **Window:** \(key.window)
+      **Usage:** \(previous)% → \(current)%
+      **Account:** \(key.accountKey)
+      """
   }
 
   private static func formatPercent(_ percent: Double) -> String {
