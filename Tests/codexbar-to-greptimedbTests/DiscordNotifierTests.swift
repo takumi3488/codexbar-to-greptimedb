@@ -10,12 +10,14 @@ import Testing
 
   let message = DiscordNotifier.message(for: recovery)
 
-  #expect(message.contains("claude"))
-  #expect(message.contains("oauth"))
-  #expect(message.contains("a@example.com"))
-  #expect(message.contains("primary"))
-  #expect(message.contains("100%"))
-  #expect(message.contains("82.5%"))
+  #expect(
+    message == """
+      🎉 **Usage limit recovered**
+      **Provider:** claude (`oauth`)
+      **Window:** primary
+      **Usage:** 100% → 82.5%
+      **Account:** a@example.com
+      """)
 }
 
 @Test func formatsWholeNumberCurrentPercentWithoutADecimalPoint() {
