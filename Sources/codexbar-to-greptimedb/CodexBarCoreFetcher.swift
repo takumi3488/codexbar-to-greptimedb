@@ -6,7 +6,7 @@ struct CodexBarCoreFetcher: Sendable {
   let sourceOverride: String?
 
   func fetchSnapshots() async throws -> [ExportSnapshot] {
-    let config = try CodexBarConfigStore().load() ?? .makeDefault()
+    let config = try CodexBarConfigLoader.load()
     let providers = try selectedProviders(config: config)
     let browserDetection = BrowserDetection()
     let usageFetcher = UsageFetcher()
