@@ -48,10 +48,12 @@ struct CodexBarConfigLoader {
     }
 
     guard ignoredUnknownProvider,
-      let filteredData = try? JSONSerialization.data(withJSONObject: root.merging(
-        ["providers": filteredProviders],
-        uniquingKeysWith: { _, new in new }
-      )),
+      let filteredData = try? JSONSerialization.data(
+        withJSONObject: root.merging(
+          ["providers": filteredProviders],
+          uniquingKeysWith: { _, new in new }
+        )
+      ),
       let config = try? JSONDecoder().decode(CodexBarConfig.self, from: filteredData)
     else {
       return nil
